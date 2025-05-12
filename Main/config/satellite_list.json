@@ -1,0 +1,117 @@
+[
+    {
+        "name": "ISS (ZARYA)",
+        "catalogs": {
+            "NORAD": 25544,
+            "Int'l": "1998-067A"
+        },
+        "frequency": 145.825
+    },
+    {
+        "name": "NOAA-15",
+        "catalogs": {
+            "NORAD": 25338,
+            "Int'l": "1998-030A"
+        },
+        "frequency": 1702.5
+    },
+    {
+        "name": "NOAA-19",
+        "catalogs": {
+            "NORAD": 33591,
+            "Int'l": "2009-005A"
+        },
+        "frequency": 1698.0
+    },
+    {
+        "name": "METOP-B",
+        "catalogs": {
+            "NORAD": 38771,
+            "Int'l": "2012-049A"
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "SUOMI-NPP",
+        "catalogs": {
+            "NORAD": 37849,
+            "Int'l": "2011-061A"
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "AQUA",
+        "catalogs": {
+            "NORAD": 27424,
+            "Int'l": "2002-022A"
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "TERRA",
+        "catalogs": {
+            "NORAD": 25994,
+            "Int'l": "1999-068A"
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "Lunar Reconnaissance Orbiter",
+        "catalogs": {
+            "NORAD": 35315,
+            "Int'l": "2009-031A",
+            "Horizons": -85
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "Europa Clipper",
+        "catalogs": {
+            "NORAD": 61507,
+            "Int'l": "2024-182A",
+            "Horizons": -159
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "STEREO-A",
+        "catalogs": {
+            "NORAD": 29510,
+            "Int'l": "2006-047A",
+            "Horizons": -234
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "JUICE",
+        "catalogs": {
+            "NORAD": 56176,
+            "Int'l": "2023-053A",
+            "Horizons": -28
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "Moon",
+        "catalogs": {
+            "Horizons": 301
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "TIANLIAN 2-05",
+        "catalogs": {
+            "NORAD": 63662,
+            "Int'l": "2025-084A"
+        },
+        "frequency": 0.0
+    },
+    {
+        "name": "STARLINK-4472",
+        "catalogs": {
+            "NORAD": 53661,
+            "Int'l": "2022-105P"
+        },
+        "frequency": 0.0
+    }
+]

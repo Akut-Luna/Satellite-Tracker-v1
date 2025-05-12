@@ -1,0 +1,2 @@
+# the de440.bsp file is over the limit of 100 Mb -> use git lfs
+Main/data/Kernels/spk/de440.bsp filter=lfs diff=lfs merge=lfs -text
