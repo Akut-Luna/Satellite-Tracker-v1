@@ -113,5 +113,12 @@
             "Int'l": "2022-105P"
         },
         "frequency": 0.0
+    },
+    {
+        "name": "Jupiter",
+        "catalogs": {
+            "Horizons": 599
+        },
+        "frequency": 0.0
     }
 ]
