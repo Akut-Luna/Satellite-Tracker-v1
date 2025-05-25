@@ -6,8 +6,6 @@ Therefore, an easy-to-use control software is needed that can track targets and 
 
 This thesis aims to develop and test a custom control software for this new radio telescope, which can track deep space and celestial targets as well as Earth satellites and communicate directly with the motor controller of the radio telescope.
 
----
-
 [Read the full thesis (PDF)](./Bachelor_Thesis.pdf)
 
 ## Dependencies
