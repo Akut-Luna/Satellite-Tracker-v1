@@ -9,3 +9,35 @@ This thesis aims to develop and test a custom control software for this new radi
 ---
 
 [Read the full thesis (PDF)](./Bachelor_Thesis.pdf)
+
+## Dependencies
+
+This project requires the following Python packages:
+
+- numpy
+- pandas
+- matplotlib
+- cartopy
+- spiceypy
+- requests
+- python-dotenv
+- astropy
+- skyfield
+- PySide6
+
+You can install them using pip:
+
+Math and data packages
+```bash
+pip install numpy pandas matplotlib requests python-dotenv
+```
+
+Astronomy packages
+```bash
+pip install astropy skyfield spiceypy
+```
+
+UI and mapping packages
+```bash
+pip install PySide6 cartopy
+```
