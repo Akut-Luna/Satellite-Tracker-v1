@@ -8,22 +8,6 @@
         "frequency": 145.825
     },
     {
-        "name": "NOAA-15",
-        "catalogs": {
-            "NORAD": 25338,
-            "Int'l": "1998-030A"
-        },
-        "frequency": 1702.5
-    },
-    {
-        "name": "NOAA-19",
-        "catalogs": {
-            "NORAD": 33591,
-            "Int'l": "2009-005A"
-        },
-        "frequency": 1698.0
-    },
-    {
         "name": "METOP-B",
         "catalogs": {
             "NORAD": 38771,
