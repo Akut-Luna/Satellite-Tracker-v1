@@ -2047,6 +2047,8 @@ class SatelliteTrackerApp(QMainWindow):
 
     def visualise_next_pass(self):
         data = self.find_passes(return_data=True)
+        if data == None:
+            return
 
         start_time = data[0][0]
         end_time = data[0][1]
