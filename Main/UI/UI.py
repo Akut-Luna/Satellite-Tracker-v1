@@ -1686,7 +1686,7 @@ class SatelliteTrackerApp(QMainWindow):
                     _, topocentric = self.calculate_satellite_and_topocentric(current_satellite, self.datetime_to_skyfield_time(current_time))
                     el, _, _, _, _, _ = topocentric.frame_latlon_and_rates(self.skyfield_antenna_pos)
                     el = el.degrees
-                                        
+
                     # If this is the first point
                     if last_el is None:
                         if el >= min_elevation:
