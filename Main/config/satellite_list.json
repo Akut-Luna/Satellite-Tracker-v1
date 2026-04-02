@@ -3,8 +3,7 @@
         "name": "ARTEMIS 2",
         "catalogs": {
             "NORAD": 68538,
-            "Int'l": "2026-069A",
-            "Horizons": -1024
+            "Int'l": "2026-069A"
         },
         "frequency": 0.0
     },
