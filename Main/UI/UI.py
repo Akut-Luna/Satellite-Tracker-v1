@@ -25,7 +25,7 @@ from skyfield.iokit import parse_tle_file
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QLineEdit, QPushButton, QTextEdit, QComboBox, 
-    QDateTimeEdit, QRadioButton, QButtonGroup, QFileDialog,
+    QDateTimeEdit, QRadioButton, QCheckBox, QButtonGroup, QFileDialog,
     QGroupBox, QGridLayout, QSpinBox, QDoubleSpinBox,
     QStackedWidget, QFrame
 )
@@ -124,6 +124,7 @@ class SatelliteTrackerApp(QMainWindow):
         self.min_angle_change_before_update = float(os.getenv('MIN_ANGLE_CHANGE_BEFORE_UPDATE'))
         self.local_tz = os.getenv('LOCAL_TZ') # local time zone
         self.display_light_time_correction_option = os.getenv('DISPLAY_LIGHT_TIME_CORRECTION_OPTION').upper() == 'TRUE'
+        self.display_horizons_directly_option = os.getenv('DISPLAY_HORIZONS_DIRECTLY_OPTION').upper() == 'TRUE'
 
         self.skyfield_antenna_pos = wgs84.latlon(self.antenna_latitude, self.antenna_longitude, self.antenna_altitude)
         self.skyfield_ts = load.timescale() # used to create skyfield time objects
@@ -576,7 +577,7 @@ class SatelliteTrackerApp(QMainWindow):
         self.tracking_layout.addWidget(self.tracking_btn)
 
         # Start Tracking at AOS -------------------------------------------------------------------
-        self.start_tracking_at_AOS_btn = QRadioButton('Start Tracking at AOS')
+        self.start_tracking_at_AOS_btn = QCheckBox('Start Tracking at AOS')
         self.tracking_layout.addWidget(self.start_tracking_at_AOS_btn)
 
         # Light Time Correction button ------------------------------------------------------------
@@ -585,8 +586,21 @@ class SatelliteTrackerApp(QMainWindow):
         # from a different source. In the config file you can set DISPLAY_LIGHT_TIME_CORRECTION_OPTION 
         # to True in order to display this button, that allows the activation of this feature. 
         if self.display_light_time_correction_option:
-            self.light_time_correction_btn = QRadioButton('Light Time Correction')
+            self.light_time_correction_btn = QCheckBox('Light Time Correction')
             self.tracking_layout.addWidget(self.light_time_correction_btn)
+
+        # Horizons direct button ------------------------------------------------------------------
+        # During the Artemis II mission a mismatch between the calculations for AZ/EL of this program 
+        # based on Horizons data, and the AZ/EL data from Horizons itself was noticed. So an option 
+        # the use the AZ/EL data from Horizons direcly was added. In the config file you can set 
+        # DISPLAY_HORIZONS_DIRECTLY_OPTION to True in order to display this button, that allows 
+        # the activation of this feature. 
+        if self.display_horizons_directly_option:
+            self.horizons_directly_btn = QCheckBox('Horizons Directly')
+            self.tracking_layout.addWidget(self.horizons_directly_btn)
+            self.horizons_directly_btn.setToolTip(
+                'Use data (AZ, EL, Range, Range Rate) directly from Horizons,\ninstead of calculating it from the state vector.\nWorks only in List mode.'
+            )
 
         self.middle_layout.addWidget(self.tracking_group)
 
@@ -1096,6 +1110,8 @@ class SatelliteTrackerApp(QMainWindow):
             if need_to_update:
                 self.log_message(f'Downloading new data for Spacecraft {satellite_id} ...')
                 self.query_horizons_api(satellite_id)
+                self.query_horizons_api_AZ_EL(satellite_id)
+
                 self.load_all_satellite_data(ID=satellite_id)
             
         else:
@@ -1145,6 +1161,49 @@ class SatelliteTrackerApp(QMainWindow):
 
         el, az, slant_range, el_rate, az_rate, range_rate = topocentric.frame_latlon_and_rates(self.skyfield_antenna_pos)
         
+        # Horizons directly -----------------------------------------------------------------------
+        # During the Artemis II mission a mismatch between the calculations for AZ/EL of this program based on Horizons 
+        # data, and the AZ/EL data from Horizons itself was noticed. So an option the use the AZ/EL data from Horizons
+        # direcly was added.
+        if self.display_horizons_directly_option and self.horizons_directly_btn.isChecked():            
+            df_direct = current_satellite['df_direct']
+            datetime_t = self.skyfield_time_to_datetime(t)
+
+            # Convert time data in df to timezone-aware datetime object if needed
+            if isinstance(df_direct['Calendar Date (UTC)'].iloc[0], str):
+                df_direct['Calendar Date (UTC)'] = pd.to_datetime(df_direct['Calendar Date (UTC)']).dt.tz_localize('UTC')
+
+            # find two data points closest in time
+            closest_rows = df_direct.iloc[(df_direct['Calendar Date (UTC)'] - datetime_t).abs().argsort()[:2]]
+            
+            # linear interpolation between the two data points ------------------------------------
+            t1, t2 = closest_rows['Calendar Date (UTC)']
+            
+            az_1, az_2 = closest_rows['Az']
+            el_1, el_2 = closest_rows['El']
+
+            delta_1,  delta_2  = closest_rows['Delta']
+            deldot_1, deldot_2 = closest_rows['Deldot']
+
+            t1 = pd.to_datetime(t1)
+            t2 = pd.to_datetime(t2)
+
+            factor = (datetime_t - t1) / (t2 - t1)
+
+            az_now = az_1 + factor * (az_2 - az_1) # deg
+            el_now = el_1 + factor * (el_2 - el_1) # deg
+
+            delta_now = delta_1 + factor * (delta_2 - delta_1) # AU
+            deldot_now = deldot_1 + factor * (deldot_2 - deldot_1) # km/s
+            # -------------------------------------------------------------------------------------
+        
+            # over wite with direct values
+            az = az_now 
+            el = el_now 
+            slant_range = delta_now * 149597870.7 # km
+            range_rate = deldot_now
+        # -----------------------------------------------------------------------------------------
+
         # light travel time -----------------------------------------------------------------------
         # Since the Horizon data is already ligth corrected, my light correction is not needed.
         # I'm still leaving this feature in because it might be usefull in the future with data
@@ -1162,13 +1221,15 @@ class SatelliteTrackerApp(QMainWindow):
         altitude = wgs84.height_of(satellite)
         
         # units -----------------------------------------------------------------------------------
-        az = az.degrees
-        el = el.degrees
-        slant_range = slant_range.km
+        if not (self.display_horizons_directly_option and self.horizons_directly_btn.isChecked()):
+            # if Horizons directly is used they are already floats
+            az = az.degrees
+            el = el.degrees
+            slant_range = slant_range.km
+            range_rate = range_rate.km_per_s
 
         az_rate = az_rate.degrees.per_second
         el_rate = el_rate.degrees.per_second
-        range_rate = range_rate.km_per_s
         
         latitude = subpoint.latitude.degrees
         longitude = subpoint.longitude.degrees
@@ -2150,6 +2211,7 @@ class SatelliteTrackerApp(QMainWindow):
                 if ID is not None and ID != spacecraft_id: # after Horizon data was updated
                     continue                               # there is no need to update all Horizon satellites
                 
+                # state vector data -------------
                 file_name = f'spacecraft_data_({spacecraft_id}).csv'
                 file_path = os.path.join('Main', 'data', 'Horizons', file_name)
                 if os.path.exists(file_path):
@@ -2161,10 +2223,30 @@ class SatelliteTrackerApp(QMainWindow):
                         # download data
                         self.log_message(f'Downloading new data for Spacecraft {spacecraft_id}...')
                         self.query_horizons_api(spacecraft_id)
-
+                        
                         # and try again
                         df = pd.read_csv(file_path)
                         current_satellite['df'] = df
+                    except Exception as e:
+                        self.log_message(f'Error downloading and reading data: {str(e)}')
+                        print(traceback.format_exc())
+
+                # direct AZ/EL data -------------
+                file_name = f'spacecraft_data_({spacecraft_id})_direct.csv'
+                file_path = os.path.join('Main', 'data', 'Horizons', file_name)
+                if os.path.exists(file_path):
+                    df = pd.read_csv(file_path)
+                    current_satellite['df_direct'] = df
+                else:
+                    self.log_message(f'File does not exist: {file_path}')
+                    try:
+                        # download data
+                        self.log_message(f'Downloading new data for Spacecraft {spacecraft_id}...')
+                        self.query_horizons_api_AZ_EL(spacecraft_id)
+                        
+                        # and try again
+                        df = pd.read_csv(file_path)
+                        current_satellite['df_direct'] = df
                     except Exception as e:
                         self.log_message(f'Error downloading and reading data: {str(e)}')
                         print(traceback.format_exc())
@@ -2281,13 +2363,76 @@ class SatelliteTrackerApp(QMainWindow):
             self.log_message(f'Could not get data from Horizons API: {str(e)}')
             print(traceback.format_exc())
             return False
+        
+    def query_horizons_api_AZ_EL(self, spacecraft_id):
+        '''
+        Query the JPL Horizons API for AZ/EL data directly. This is a fix since a mismatch between the data from Horizons Systems
+        and the calculations from this programm was noticed during the Artemis II mission.
 
-    def process_horizons_output(self, data):
+        Parameters:
+            spacecraft_id (int): id of spacecraft of celestial body in Horizons (JPL) catalog
+        '''
+        # Base URL for the JPL Horizons System
+        url = 'https://ssd.jpl.nasa.gov/api/horizons.api'
+        
+        start_date = (self.utc_now() - timedelta(days=0.5)).strftime('%Y-%m-%dT%H:%M:%S')
+        end_date = (self.utc_now() + timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%S')
+
+        # For Earth (399), use East-longitude as positive.
+        # Format: 'longitude,latitude,altitude'
+        location = f"'{self.antenna_longitude},{self.antenna_latitude},{self.antenna_altitude/1000}'" # Must be in quotes
+
+        params = {
+            "format": "json",
+            "COMMAND": str(spacecraft_id),
+            "OBJ_DATA": "NO",
+            "MAKE_EPHEM": "YES",
+            "EPHEM_TYPE": "OBSERVER",
+            "CENTER": "coord@399",
+            "COORD_TYPE": "GEODETIC",
+            "SITE_COORD": location,
+            "QUANTITIES": "'4,20'", # Must be in quotes
+            "START_TIME": start_date,
+            "STOP_TIME": end_date,
+            "STEP_SIZE": "1m",
+            "ANG_FORMAT": "DEG",
+            "CSV_FORMAT": "YES",
+        }
+            
+        try:
+            # Make the request to JPL Horizons API
+            response = requests.get(url, params=params)
+
+            # Check if the request was successful
+            if response.status_code == 200:
+                data = response.json()
+                if 'error' in data:
+                    print(f'Error query the Horizons API: {data['error']}')
+                    return False
+                self.save_horizons_results(data, spacecraft_id, direct_AZ_EL=True)
+                return True
+            else:
+                print(f'Error query the Horizons API: API request failed with status code {response.status_code}')
+                print(response.text)
+                return False
+        
+        except requests.exceptions.ConnectionError:
+            self.log_message('Could not connect to Horizons API: No internet connection.')
+            print('No internet connection.')
+            return False
+
+        except Exception as e:
+            self.log_message(f'Could not get data from Horizons API: {str(e)}')
+            print(traceback.format_exc())
+            return False
+
+    def process_horizons_output(self, data, direct_AZ_EL=False):
         '''
         Extract CSV from Horizons (JPL) output and add UTC column.
 
         Parameters:
             data (dir): JSON with the data from Horizons
+            direct_AZ_EL (bool): if False: data is state vector, if True: data is AZ/EL data 
         '''
         result_text = data['result']
         csv_start = result_text.find('$$SOE')
@@ -2302,36 +2447,73 @@ class SatelliteTrackerApp(QMainWindow):
         
         processed_data = []
         for line in lines:
-            colums = line.split(',')
-            # clean up data -------------------------
-            # convert to numbers
-            colums_with_numbers = [0,2,3,4,5,6,7,8]
-            for i in colums_with_numbers:
-                colums[i] = float(colums[i])
-            
-            # remove empty element
-            # Method 1: Last element is empty because of how it was created
-            colums.pop()
+            if direct_AZ_EL:
+                columns = line.strip().split(',')
+                
+                # Remove the trailing empty element caused by the ending comma
+                if columns[-1] == '':
+                    columns.pop()
 
-            # Method 2: More robust, but more expensive
-            # colums = list(filter(lambda a: a != '', colums)) 
-            # ---------------------------------------
-            jd_tdb = colums[0]
-            delta_t = colums[2]
-            jd_utc = self.convert_tdb_to_utc(jd_tdb, delta_t)
-            dt_utc = datetime(2000, 1, 1, 12) + timedelta(days=jd_utc - 2451545.0)
-            colums.append(dt_utc.isoformat())  # Append UTC date
-            processed_data.append(colums)
+                # Column Mapping based on your provided data string:
+                # 0: "2026-Apr-02 20:14:17" (UTC Date)
+                # 1: " " or "*" (Solar Marker)
+                # 2: "m" or " " (Lunar/RTS Marker)
+                # 3: 69.090454 (Azimuth)
+                # 4: -58.410684 (Elevation)
+                # 5: 0.00036330079047 (Delta)
+                # 6: -2.2481867 (Deldot)
+
+                # Parse the UTC date string directly
+                utc_date_str = columns[0].strip()
+                dt_utc = datetime.strptime(utc_date_str, '%Y-%b-%d %H:%M:%S')
+                
+                # Convert numeric values
+                az = float(columns[3])
+                el = float(columns[4])
+                delta = float(columns[5])
+                deldot = float(columns[6])
+
+                processed_row = [
+                    az,
+                    el,
+                    delta,
+                    deldot,
+                    dt_utc.isoformat()
+                ]
+                processed_data.append(processed_row)
+
+            else:
+                colums = line.split(',')
+                # clean up data -------------------------
+                # convert to numbers
+                colums_with_numbers = [0,2,3,4,5,6,7,8] # colum 1 is not a float
+                for i in colums_with_numbers:
+                    colums[i] = float(colums[i])
+                
+                # remove empty element
+                # Method 1: Last element is empty because of how it was created
+                colums.pop()
+
+                # Method 2: More robust, but more expensive
+                # colums = list(filter(lambda a: a != '', colums)) 
+                # ---------------------------------------
+                jd_tdb = colums[0]
+                delta_t = colums[2]
+                jd_utc = self.convert_tdb_to_utc(jd_tdb, delta_t)
+                dt_utc = datetime(2000, 1, 1, 12) + timedelta(days=jd_utc - 2451545.0)
+                colums.append(dt_utc.isoformat())  # Append UTC date
+                processed_data.append(colums)
         
         return processed_data
 
-    def save_horizons_results(self, data, spacecraft_id):
+    def save_horizons_results(self, data, spacecraft_id, direct_AZ_EL=False):
         '''
         Save Horizons data to CSV and updates metadata
         
         Parameters:
             data (dir): JSON with the data from Horizons
             spacecraft_id (int): id of spacecraft of celestial body in Horizons (JPL) catalog
+            direct_AZ_EL (bool): if False: data is state vector, if True: data is AZ/EL data 
         '''
 
         output_dir = os.path.join('Main', 'data', 'Horizons')
@@ -2342,13 +2524,18 @@ class SatelliteTrackerApp(QMainWindow):
             
         if 'result' in data:            
             # Extract CSV data
-            processed_data = self.process_horizons_output(data)
+            processed_data = self.process_horizons_output(data, direct_AZ_EL=direct_AZ_EL)
             
             # Convert to DataFrame and save
-            headers = ['JDTDB', 'Calendar Date (TDB)', 'delta-T', 'X', 'Y', 'Z', 'VX', 'VY', 'VZ', 'Calendar Date (UTC)']
-            df = pd.DataFrame(processed_data, columns=headers)
+            if direct_AZ_EL:
+                headers = ['Az', 'El', 'Delta', 'Deldot', 'Calendar Date (UTC)']
+                df = pd.DataFrame(processed_data, columns=headers)
+                csv_path = os.path.join(output_dir, f'spacecraft_data_({spacecraft_id})_direct.csv')
+            else:
+                headers = ['JDTDB', 'Calendar Date (TDB)', 'delta-T', 'X', 'Y', 'Z', 'VX', 'VY', 'VZ', 'Calendar Date (UTC)']
+                df = pd.DataFrame(processed_data, columns=headers)
+                csv_path = os.path.join(output_dir, f'spacecraft_data_({spacecraft_id}).csv')
             
-            csv_path = os.path.join(output_dir, f'spacecraft_data_({spacecraft_id}).csv')
             df.to_csv(csv_path, index=False)
             self.log_message(f'Data saved to {csv_path}')
 

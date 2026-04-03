@@ -39,3 +39,16 @@ UI and mapping packages
 ```bash
 pip install PySide6 cartopy
 ```
+
+# Patch Notes
+## Version 1.1
+During the Artemis II mission, a mismatch was identified between the program's AZ/EL calculations based on Horizons data and the AZ/EL data provided by Horizons itself. An option to use the Horizons AZ/EL data directly has been added. Specifically, the following values are overwritten when using the **Horizons Directly** option:
+
+- Azimuth
+- Elevation
+- Range
+- Range Rate
+
+This ensures that the most important features (antenna pointing and Doppler shift calculations) align with the data calculated by Horizons. But you will still have slightly incorrect visualizations, such as the ground track and footprint, since they don't use the direct data.
+
+**Note:** There is a small observed difference between the values on the Horizons website and those retrieved via the Horizons API. For Azimuth, this is <0.1°, and for Elevation, it is <0.5°.
