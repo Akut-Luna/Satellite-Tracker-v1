@@ -41,6 +41,10 @@ pip install PySide6 cartopy
 ```
 
 # Patch Notes
+## Version 1.2
+By default the `Start Tracking at AOS` button will be unchecked as soon as the tracking starts. This can be turned off by setting `AUTO_UNCHECK_START_TRACKING_AT_AOS_BTN` in the `config.json` to `False`.
+WARNING: Stoping the tracking maually will also uncheck the `Start Tracking at AOS` button, in order to prevent immediate restart of tracking.
+
 ## Version 1.1
 During the Artemis II mission, a mismatch was identified between the program's AZ/EL calculations based on Horizons data and the AZ/EL data provided by Horizons itself. An option to use the Horizons AZ/EL data directly has been added. Specifically, the following values are overwritten when using the **Horizons Directly** option:
 
