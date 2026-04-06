@@ -125,6 +125,7 @@ class SatelliteTrackerApp(QMainWindow):
         self.local_tz = os.getenv('LOCAL_TZ') # local time zone
         self.display_light_time_correction_option = os.getenv('DISPLAY_LIGHT_TIME_CORRECTION_OPTION').upper() == 'TRUE'
         self.display_horizons_directly_option = os.getenv('DISPLAY_HORIZONS_DIRECTLY_OPTION').upper() == 'TRUE'
+        self.auto_uncheck_start_tracking_at_AOS_btn = os.getenv('AUTO_UNCHECK_START_TRACKING_AT_AOS_BTN').upper() == 'TRUE'
 
         self.skyfield_antenna_pos = wgs84.latlon(self.antenna_latitude, self.antenna_longitude, self.antenna_altitude)
         self.skyfield_ts = load.timescale() # used to create skyfield time objects
@@ -1682,6 +1683,9 @@ class SatelliteTrackerApp(QMainWindow):
             if self.socket is not None: # send stop command to motors
                 self.talk_to_motor_controller('stop')
 
+            # uncheck "Start Tracking at AOS" to prevent immediate restart of tracking
+            self.start_tracking_at_AOS_btn.setChecked(False)
+
             # ensures that the button is not checked if the function was not called by the button
             self.tracking_btn.setChecked(False)
 
@@ -2005,7 +2009,8 @@ class SatelliteTrackerApp(QMainWindow):
             if self.start_tracking_at_AOS_btn.isChecked():
                 if not self.tracking and el > 0 and tracking_mode in [0,2,3]:
                     self.toggle_tracking(True)
-                    self.start_tracking_at_AOS_btn.setChecked(False)
+                    if self.auto_uncheck_start_tracking_at_AOS_btn:
+                        self.start_tracking_at_AOS_btn.setChecked(False)
                     self.log_message('Tracking was started automatically at expected AOS.')
 
             # stop tracking when satellite is under the horizon
