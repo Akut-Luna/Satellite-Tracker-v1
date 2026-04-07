@@ -2022,6 +2022,13 @@ class SatelliteTrackerApp(QMainWindow):
             if self.socket is not None:
                 # get current position from antenna
                 current_az, current_el = self.talk_to_motor_controller('status')
+                
+                ############# DEBUG #############
+                log_file = os.path.join('Main','data','current_value_log.csv')
+                with open(log_file, 'a') as f:
+                    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    f.write(f'{timestamp},{current_az},{current_el}\n')
+                #################################
 
                 self.current_azimuth.setText(f'{current_az:.1f}°')
                 self.current_elevation.setText(f'{current_el:.1f}°')
