@@ -1,12 +1,5 @@
 [
     {
-        "name": "ARTEMIS 2",
-        "catalogs": {
-            "Horizons": -1024
-        },
-        "frequency": 2245.0
-    },
-    {
         "name": "ISS (ZARYA)",
         "catalogs": {
             "NORAD": 25544,
