@@ -1047,11 +1047,10 @@ class SatelliteTrackerApp(QMainWindow):
         '''
         def az_el_to_vector(azimuth, elevation):
             '''
-            NOTE: I'm 99.9% sure that this function can be replaced by self.az_el_to_cartesian
+            NOTE: I'm 99.9% sure that this function can be replaced by self.az_el_to_cartesian()
             They use different orientations of the coordiant systems but since we are only interested
             in the angle between 2 vectors that shouldn't matter. But I don't have acesses to the motorcontroller
             at the moment and I don't want to change a tested system with out the ability to test again.
-
 
             Convert azimuth and elevation angles (in degrees) to a 3D unit vector.
             Azimuth: angle in the x-y plane from x-axis (0° is +x, 90° is +y)
