@@ -1,6 +1,6 @@
 # Satellite Tracker
 
-## OLD VERSION!!! USE VERISON 3 (coming soon)
+## OLD VERSION!!! USE [VERISON 3](https://github.com/Akut-Luna/Satellite-Tracker-v3) 
 
 The Department of Physics of the University of Zurich is presently installing a new radio telescope. This antenna should serve educational purposes, giving students the ability to gain first-hand experience in data collection and analysing real astronomical signals. It is meant to be used by high school students and university students and will be able to observe satellites, both in orbit around Earth, as well as spacecraft in deep space and celestial targets like pulsars.
 
@@ -44,7 +44,7 @@ pip install PySide6 cartopy
 
 # Patch Notes
 ## Version 3
-Coming soon.
+[Version 3](https://github.com/Akut-Luna/Satellite-Tracker-v3) is a complete rewrite of the project. 
 
 ## Version 1.2
 By default the `Start Tracking at AOS` button will be unchecked as soon as the tracking starts. This can be turned off by setting `AUTO_UNCHECK_START_TRACKING_AT_AOS_BTN` in the `config.json` to `False`.
